@@ -1,3 +1,4 @@
+$Host.UI.RawUI.WindowTitle = "ThroughMyLens - FastAPI"
 $ErrorActionPreference = 'Stop'
 $projectRoot = Split-Path -Parent $PSScriptRoot
 $apiRoot = Join-Path $projectRoot 'apps\api'
