@@ -27,3 +27,7 @@ work/
 # Local/demo JPG images
 *.jpg
 *.jpeg
+
+# Website public photographs must be deployed
+!apps/web/public/photographs/*.jpg
+!apps/web/public/photographs/**/*.jpg
