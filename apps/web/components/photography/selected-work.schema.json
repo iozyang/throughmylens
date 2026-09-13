@@ -1,0 +1,295 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "精选作品信息（此文件是规则，不是填写文件）",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "photos"
+  ],
+  "properties": {
+    "$schema": {
+      "type": "string"
+    },
+    "photos": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "slug",
+          "file",
+          "src",
+          "width",
+          "height",
+          "order",
+          "title",
+          "alt",
+          "description",
+          "location",
+          "geo",
+          "date",
+          "time",
+          "timezone",
+          "camera",
+          "lens",
+          "focalLength",
+          "focalLength35mm",
+          "aperture",
+          "shutterSpeed",
+          "iso",
+          "series",
+          "tags"
+        ],
+        "properties": {
+          "slug": {
+            "type": "string",
+            "pattern": "^[a-z0-9-]+$"
+          },
+          "file": {
+            "type": "string",
+            "minLength": 1
+          },
+          "src": {
+            "type": "string",
+            "pattern": "^/photographs/selected-work/[a-z0-9-]+\\.jpg$"
+          },
+          "width": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "height": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "order": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "title": {
+            "$ref": "#/$defs/localized"
+          },
+          "alt": {
+            "$ref": "#/$defs/localized"
+          },
+          "description": {
+            "$ref": "#/$defs/localized"
+          },
+          "location": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "place",
+              "district",
+              "city",
+              "region",
+              "country",
+              "countryCode",
+              "display",
+              "geocodeQuery"
+            ],
+            "properties": {
+              "place": {
+                "$ref": "#/$defs/localized"
+              },
+              "district": {
+                "$ref": "#/$defs/localized"
+              },
+              "city": {
+                "$ref": "#/$defs/localized"
+              },
+              "region": {
+                "$ref": "#/$defs/localized"
+              },
+              "country": {
+                "$ref": "#/$defs/localized"
+              },
+              "countryCode": {
+                "type": "string",
+                "pattern": "^(|[A-Z]{2})$"
+              },
+              "display": {
+                "$ref": "#/$defs/localized"
+              },
+              "geocodeQuery": {
+                "$ref": "#/$defs/localized"
+              }
+            }
+          },
+          "geo": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "latitude",
+              "longitude",
+              "coordinateSystem",
+              "source",
+              "precision"
+            ],
+            "properties": {
+              "latitude": {
+                "type": [
+                  "number",
+                  "string"
+                ],
+                "minimum": -90,
+                "maximum": 90,
+                "pattern": "^$"
+              },
+              "longitude": {
+                "type": [
+                  "number",
+                  "string"
+                ],
+                "minimum": -180,
+                "maximum": 180,
+                "pattern": "^$"
+              },
+              "coordinateSystem": {
+                "type": "string",
+                "const": "WGS84"
+              },
+              "source": {
+                "type": "string",
+                "enum": [
+                  "exif",
+                  "geocoded",
+                  "manual",
+                  ""
+                ]
+              },
+              "precision": {
+                "type": "string",
+                "enum": [
+                  "exact",
+                  "approximate",
+                  "city",
+                  ""
+                ]
+              }
+            }
+          },
+          "date": {
+            "type": "string",
+            "pattern": "^(|[0-9]{4}-[0-9]{2}-[0-9]{2})$"
+          },
+          "time": {
+            "type": "string",
+            "pattern": "^(|([01][0-9]|2[0-3]):[0-5][0-9](:[0-5][0-9])?)$"
+          },
+          "timezone": {
+            "type": "string",
+            "description": "IANA time zone, e.g. Asia/Shanghai; empty when unknown."
+          },
+          "camera": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "brand",
+              "model"
+            ],
+            "properties": {
+              "brand": {
+                "type": "string"
+              },
+              "model": {
+                "type": "string"
+              }
+            }
+          },
+          "lens": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "brand",
+              "model"
+            ],
+            "properties": {
+              "brand": {
+                "type": "string"
+              },
+              "model": {
+                "type": "string"
+              }
+            }
+          },
+          "focalLength": {
+            "type": "string",
+            "pattern": "^(|[0-9]+(\\.[0-9]+)?mm)$"
+          },
+          "focalLength35mm": {
+            "type": "string",
+            "pattern": "^(|[0-9]+(\\.[0-9]+)?mm)$"
+          },
+          "aperture": {
+            "type": "string",
+            "pattern": "^(|f/[0-9]+(\\.[0-9]+)?)$"
+          },
+          "shutterSpeed": {
+            "type": "string",
+            "pattern": "^(|([0-9]+(\\.[0-9]+)?|1/[1-9][0-9]*)s)$"
+          },
+          "iso": {
+            "type": [
+              "integer",
+              "string"
+            ],
+            "minimum": 1,
+            "pattern": "^$"
+          },
+          "series": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "slug",
+              "zh",
+              "en"
+            ],
+            "properties": {
+              "slug": {
+                "type": "string",
+                "pattern": "^(|[a-zA-Z0-9_-]+)$"
+              },
+              "zh": {
+                "type": "string"
+              },
+              "en": {
+                "type": "string"
+              }
+            }
+          },
+          "tags": {
+            "type": [
+              "array",
+              "string"
+            ],
+            "uniqueItems": true,
+            "items": {
+              "type": "string",
+              "minLength": 1
+            },
+            "pattern": "^$"
+          }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "localized": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "zh",
+        "en"
+      ],
+      "properties": {
+        "zh": {
+          "type": "string"
+        },
+        "en": {
+          "type": "string"
+        }
+      }
+    }
+  }
+}

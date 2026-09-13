@@ -1,0 +1,91 @@
+{
+  "$schema": "./selected-work.schema.json",
+  "photos": [
+    {
+      "slug": "1",
+      "file": "1.jpg",
+      "src": "/photographs/selected-work/1.jpg",
+      "width": 1440,
+      "height": 1920,
+      "order": 0,
+      "title": {
+        "zh": "雪的脉络",
+        "en": "Lines in Snow"
+      },
+      "alt": {
+        "zh": "雪后俯瞰哈尔滨南站铁路编组场",
+        "en": "Aerial view of the railway yard at Harbin South Railway Station after snowfall"
+      },
+      "description": {
+        "zh": "",
+        "en": ""
+      },
+      "location": {
+        "place": {
+          "zh": "哈尔滨南站",
+          "en": "Harbin South Railway Station"
+        },
+        "district": {
+          "zh": "南岗区",
+          "en": "Nangang District"
+        },
+        "city": {
+          "zh": "哈尔滨",
+          "en": "Harbin"
+        },
+        "region": {
+          "zh": "黑龙江",
+          "en": "Heilongjiang"
+        },
+        "country": {
+          "zh": "中国",
+          "en": "China"
+        },
+        "countryCode": "CN",
+        "display": {
+          "zh": "哈尔滨南站，哈尔滨，中国",
+          "en": "Harbin South Railway Station, Harbin, China"
+        },
+        "geocodeQuery": {
+          "zh": "哈尔滨南站铁路编组场，南岗区，哈尔滨市，黑龙江省，中国",
+          "en": "Harbin South Railway Station railway yard, Nangang District, Harbin, Heilongjiang, China"
+        }
+      },
+      "geo": {
+        "latitude": "",
+        "longitude": "",
+        "coordinateSystem": "WGS84",
+        "source": "",
+        "precision": ""
+      },
+      "date": "2025-12-03",
+      "time": "13:05:16",
+      "timezone": "Asia/Shanghai",
+      "camera": {
+        "brand": "DJI",
+        "model": "FC8482"
+      },
+      "lens": {
+        "brand": "DJI",
+        "model": "24.0 mm f/1.7"
+      },
+      "focalLength": "6.72mm",
+      "focalLength35mm": "24mm",
+      "aperture": "f/1.7",
+      "shutterSpeed": "1/2500s",
+      "iso": 100,
+      "series": {
+        "slug": "harbin-winter",
+        "zh": "哈尔滨之冬",
+        "en": "Harbin in Winter"
+      },
+      "tags": [
+        "winter",
+        "snow",
+        "railway",
+        "aerial",
+        "harbin"
+      ]
+    }
+  ]
+}

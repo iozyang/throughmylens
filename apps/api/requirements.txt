@@ -1,0 +1,16 @@
+alembic>=1.16,<2
+boto3>=1.40,<2
+email-validator>=2.2,<3
+fastapi>=0.141,<0.142
+httpx>=0.28,<1
+psycopg[binary]>=3.2,<4
+pydantic-settings>=2.11,<3
+pwdlib[argon2]>=0.3,<1
+pytest>=8.3,<9
+python-multipart>=0.0.20,<1
+Pillow==12.3.0
+pyvips[binary]==3.2.0
+pyvips-binary==8.18.6
+ruff>=0.11,<1
+sqlalchemy>=2.0.45,<2.1
+uvicorn[standard]>=0.35,<1

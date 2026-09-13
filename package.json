@@ -1,0 +1,12 @@
+{
+  "name": "throughmylens",
+  "version": "0.1.0",
+  "private": true,
+  "packageManager": "pnpm@11.19.0",
+  "scripts": {
+    "dev:web": "corepack pnpm --filter @throughmylens/web dev",
+    "build:web": "corepack pnpm --filter @throughmylens/web build",
+    "lint:web": "corepack pnpm --filter @throughmylens/web lint",
+    "typecheck:web": "corepack pnpm --filter @throughmylens/web typecheck"
+  }
+}

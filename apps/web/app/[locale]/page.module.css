@@ -1,0 +1,28 @@
+.main {
+  display: grid;
+  min-height: 100vh;
+  place-items: center;
+  padding: 2rem;
+}
+
+.content {
+  width: min(100%, 36rem);
+  border-top: 1px solid var(--ink);
+  padding-top: 1rem;
+}
+
+.name {
+  margin: 0;
+  font-family: var(--display-serif);
+  font-size: clamp(2.25rem, 8vw, 4.5rem);
+  font-weight: 400;
+  letter-spacing: -0.04em;
+  line-height: 0.95;
+}
+
+.note {
+  margin: 1.25rem 0 0;
+  color: var(--muted);
+  font-size: 0.95rem;
+  line-height: 1.6;
+}
