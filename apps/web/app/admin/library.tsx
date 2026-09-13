@@ -7,7 +7,7 @@ import { useCallback, useEffect, useRef, useState, type FormEvent } from "react"
 import Link from "next/link";
 import styles from "./library.module.css";
 
-import { API, csrf, errorText, request, type Config, type Values, type Photo } from "./photo-api";
+import { privateImageUrl, API, csrf, errorText, request, type Config, type Values, type Photo } from "./photo-api";
 import MetadataEditor from "./metadata-editor";
 type QueueItem = { id: string; file: File; preview: string; missing: string[]; summary: string; error: string; state: "checked" | "uploading" | "done" | "failed"; progress: number };
 const DEFAULTS: Config = { preset: "preserve", long_edge: 3000, quality: 90, min_quality: 80, max_output_kb: 4096 };
@@ -229,7 +229,7 @@ export default function Library() {
         {photos.length ? <div className={styles.grid}>{photos.map((photo, index) => {
           const thumbnail = photo.assets.find((a) => a.kind === "thumbnail");
           return <button key={photo.id} className={`${styles.photoCard} ${photo.id === selected ? styles.selected : ""}`} onClick={() => { if (selected && selected !== photo.id) { setMessage("请先关闭右侧作品编辑，再选择另一张照片。"); return; } setSelected(photo.id); }} aria-pressed={selected === photo.id}>
-            <div className={styles.thumbnail}>{thumbnail ? <img src={thumbnail.url} alt={photo.translations.zh.alt_text || photo.translations.zh.title || photo.filename} /> : <span>{stateLabel[photo.processing_status]}</span>}<span className={styles.photoIndex}>{String((page - 1) * 40 + index + 1).padStart(2, "0")}</span></div>
+            <div className={styles.thumbnail}>{thumbnail ? <img src={privateImageUrl(thumbnail.url)} alt={photo.translations.zh.alt_text || photo.translations.zh.title || photo.filename} /> : <span>{stateLabel[photo.processing_status]}</span>}<span className={styles.photoIndex}>{String((page - 1) * 40 + index + 1).padStart(2, "0")}</span></div>
             <h3>{photo.translations.zh.title || photo.filename}</h3><p>{photo.width} × {photo.height}<span>{bytes(photo.byte_size)}</span></p><div className={styles.cardStatus}><span className={photo.processing_status === "failed" ? styles.warning : ""}>{stateLabel[photo.processing_status]}</span><span>{photo.review_status === "reviewed" ? "已核对" : photo.missing_fields.length ? `待补 ${photo.missing_fields.length} 项` : "待核对"}</span></div>
           </button>;
         })}</div> : <div className={styles.empty}><div className={styles.emptyFrame}>＋</div><h2>从第一张照片开始</h2><p>上传你的 sRGB JPEG，系统会提取拍摄信息<br />并按设定的质量生成展示图片。</p><button className={styles.secondary} onClick={() => { setUploadOpen(true); input.current?.click(); }}>选择照片</button></div>}

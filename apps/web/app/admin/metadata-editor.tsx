@@ -1,8 +1,9 @@
 "use client";
 /* eslint-disable @next/next/no-img-element */
 import { useEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
-import { request, type CatalogRecord, type Photo, type TextPair } from "./photo-api";
+import { privateImageUrl, request, type CatalogRecord, type Photo, type TextPair } from "./photo-api";
 import { cities, countries, regions } from "./location-options";
+import { applyTranslations, translationFields } from "./translation-fields";
 import styles from "./asset-manager.module.css";
 
 function derive(record: CatalogRecord): CatalogRecord {
@@ -23,16 +24,30 @@ export default function MetadataEditor({ photo, onSaved, onClose, initialEdit = 
   const [editing, setEditing] = useState(initialEdit);
   const [dirty, setDirty] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [translating, setTranslating] = useState(false);
+  const [generated, setGenerated] = useState<string[]>([]);
+  const latest = useRef(record);
+  useEffect(() => { latest.current = record; }, [record]);
   const [message, setMessage] = useState("");
   const [reviewed, setReviewed] = useState(photo.review_status === "reviewed");
   const [locale, setLocale] = useState<"zh" | "en">("zh");
   const [tagInput, setTagInput] = useState(Array.isArray(photo.record.tags) ? photo.record.tags.join("，") : "");
   const dialog = useRef<HTMLDialogElement>(null);
   const form = useRef<HTMLFormElement>(null);
+  const deleted = photo.publication_status === "deleted";
+  useEffect(() => {
+    const shortcut = (event: KeyboardEvent) => {
+      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "s") {
+        event.preventDefault();
+        if (editing && !busy && !deleted && !event.repeat) form.current?.requestSubmit();
+      }
+    };
+    window.addEventListener("keydown", shortcut);
+    return () => window.removeEventListener("keydown", shortcut);
+  });
   const asset = photo.assets.find(a => a.kind === "display") || photo.assets.find(a => a.kind === "gallery");
   // Processing may finish while this form has unsaved edits. Only update system dimensions.
   const current = derive({ ...record, width: photo.record.width, height: photo.record.height });
-  const deleted = photo.publication_status === "deleted";
   const missing = [!record.camera.brand && "相机品牌", !record.camera.model && "相机型号", !record.lens.model && "镜头", !record.focalLength && "焦距", !record.aperture && "光圈", !record.shutterSpeed && "快门", !record.iso && "ISO", !current.location.display.zh && !current.location.display.en && "地点"].filter(Boolean);
 
   useEffect(() => {
@@ -51,13 +66,35 @@ export default function MetadataEditor({ photo, onSaved, onClose, initialEdit = 
   useEffect(() => {
     if (editing) form.current?.scrollIntoView({ behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "instant" : "smooth", block: "start" });
   }, [editing]);
-  function change(next: CatalogRecord) { setRecord(derive(next)); setDirty(true); setReviewed(false); }
+  function change(next: CatalogRecord) {
+    const before = translationFields(record), after = translationFields(next);
+    setGenerated(keys => keys.filter(k => before[k].en === after[k].en && before[k].zh === after[k].zh));
+    setRecord(derive(next)); setDirty(true); setReviewed(false);
+  }
+  async function translateMissing() {
+    if (busy) return;
+    const snapshot = structuredClone(record);
+    const fields = Object.fromEntries(Object.entries(translationFields(snapshot)).filter(([, v]) => v.zh.trim() && !v.en.trim()).map(([k, v]) => [k, { zh: v.zh, en: v.en }]));
+    if (!Object.keys(fields).length) { setMessage("已有中文对应的英文字段均已填写。"); return; }
+    setBusy(true); setTranslating(true); setMessage("正在翻译英文空缺，结果仅作为未保存的建议…");
+    try {
+      const result = await request<{ suggestions: Record<string, string> }>(`/photos/${photo.id}/translate`, { method: "POST", body: JSON.stringify({ fields }) });
+      const next = applyTranslations(latest.current, snapshot, result.suggestions);
+      setRecord(derive(next.record)); setGenerated(keys => [...new Set([...keys, ...next.applied])]);
+      if (next.applied.length) { setDirty(true); setReviewed(false); }
+      setMessage(`已补全 ${next.applied.length} 个英文字段。红色为 AI 未保存建议；请核对后保存。`);
+    } catch (error) { setMessage((error as Error).message); }
+    finally { setBusy(false); setTranslating(false); }
+  }
   function close() { if (!busy && (!dirty || window.confirm("有未保存的修改，确定关闭？"))) onClose(); }
   async function save(e: FormEvent) {
+    if (busy) { e.preventDefault(); return; }
     e.preventDefault(); setBusy(true); setMessage("");
     try {
       const result = await request<Photo>(`/photos/${photo.id}/metadata`, { method: "PATCH", body: JSON.stringify({ version, record: current, reviewed }) });
-      setRecord(result.record); setVersion(result.version); setDirty(false); onSaved(result); setMessage("完整 JSON 已保存，图片文件名保持不变。");
+      setRecord(result.record); setVersion(result.version); setDirty(false); setGenerated([]);
+      form.current?.querySelectorAll<HTMLElement>("[data-edited]").forEach(node => delete node.dataset.edited);
+      onSaved(result); setMessage("完整 JSON 已保存，图片文件名保持不变。");
     } catch (error) { setMessage((error as Error).message); }
     finally { setBusy(false); }
   }
@@ -71,22 +108,25 @@ export default function MetadataEditor({ photo, onSaved, onClose, initialEdit = 
     finally { setBusy(false); }
   }
   function bilingual(label: string, value: TextPair, update: (value: TextPair) => void, placeholder = "", list?: string, max = 1000) {
-    return <div className={styles.pair}><span>{label}</span><label><span className={styles.srOnly}>{label} 中文</span><input maxLength={max} list={list} placeholder={placeholder || "中文"} value={value.zh} onChange={e => update({ ...value, zh: e.target.value })} /></label><label><span className={styles.srOnly}>{label} 英文</span><input maxLength={max} placeholder="English（可留空）" value={value.en} onChange={e => update({ ...value, en: e.target.value })} /></label></div>;
+    const path = Object.entries(translationFields(record)).find(([, pair]) => pair === value)?.[0] || label;
+    return <div className={styles.pair}><span>{label}</span><label><span className={styles.srOnly}>{label} 中文</span><input name={`${path}.zh`} maxLength={max} list={list} placeholder={placeholder || "中文"} value={value.zh} onChange={e => update({ ...value, zh: e.target.value })} /></label><label><span className={styles.srOnly}>{label} 英文</span><input name={`${path}.en`} className={generated.includes(path) ? styles.aiPending : undefined} maxLength={max} placeholder="English（可留空）" value={value.en} onChange={e => update({ ...value, en: e.target.value })} /></label></div>;
   }
 
   return <dialog ref={dialog} className={styles.viewer} aria-labelledby="photo-detail-title" onCancel={e => { e.preventDefault(); close(); }}>
     <header className={styles.viewerHeader}><div><span className={styles.kicker}>PHOTO ARCHIVE</span><h2 id="photo-detail-title">{current.title.zh || current.location.display.zh || "作品信息"}</h2></div><button onClick={close} disabled={busy}>关闭 {dirty ? "（未保存）" : ""} ×</button></header>
     <div className={styles.detailLayout}>
-      <div className={styles.largePhoto}>{asset ? <img src={asset.url} alt={current.alt[locale] || current.alt.zh || "照片预览"} /> : <p>{photo.processing_error || "正在生成展示图…"}</p>}
-        <div className={styles.photoCaption}><p>{current.location.display[locale] || current.location.display.zh}</p><p>{[current.date, current.time].filter(Boolean).join(" ")}</p><p className={styles.parameters}>{[current.focalLength, current.aperture, current.shutterSpeed, current.iso ? `ISO ${current.iso}` : ""].filter(Boolean).map((v, i) => <span key={i}>{v}</span>)}</p></div>
+      <div className={styles.largePhoto}>{asset ? <img src={privateImageUrl(asset.url)} alt={current.alt[locale] || current.alt.zh || "照片预览"} /> : <p>{photo.processing_error || "正在生成展示图…"}</p>}
+        <div className={styles.photoCaption}><p>{current.location.display[locale] || current.location.display.zh}</p><p>{[current.date, current.time].filter(Boolean).join(" ")}</p><p className={styles.parameters}>{[current.focalLength35mm, current.aperture, current.shutterSpeed, current.iso ? `ISO ${current.iso}` : ""].filter(Boolean).map((v, i) => <span key={i}>{v}</span>)}</p></div>
         <div className={styles.previewControls}><button aria-pressed={locale === "zh"} onClick={() => setLocale("zh")}>中文预览</button><button aria-pressed={locale === "en"} onClick={() => setLocale("en")}>English</button><span>{current.width || "—"} × {current.height || "—"} px</span></div>
       </div>
       <div className={styles.information}>
         <div className={styles.toolbar}><button aria-pressed={!editing} onClick={() => setEditing(false)}>JSON 信息</button><button aria-pressed={editing} disabled={deleted} onClick={() => setEditing(true)}>编辑 Metadata</button><button className={styles.danger} disabled={busy || ["pending", "processing"].includes(photo.processing_status)} onClick={removeOrRestore}>{deleted ? "恢复照片" : "删除照片"}</button></div>
         {message && <p className={styles.notice} role="status">{message}</p>}
         {photo.processing_error && <p role="alert">{photo.processing_error}</p>}
-        {!editing ? <><p className={styles.hint}>私有作品信息 · {dirty ? "未保存的预览" : "已保存"} · 空白英文回退中文展示</p><dl className={styles.summaryCard}><div><dt>名称</dt><dd>{current.file}</dd></div><div><dt>时间</dt><dd>{[current.date, current.time].filter(Boolean).join(" ") || "待补充"}</dd></div><div><dt>大小</dt><dd>{current.width || "—"} × {current.height || "—"} px{asset ? ` / ${(asset.byte_size / 1024 / 1024).toFixed(2)} MB` : ""}</dd></div><div><dt>地点</dt><dd>{current.location.display[locale] || current.location.display.zh || "待补充"}</dd></div><div><dt>参数</dt><dd className={styles.parameters}>{[current.focalLength, current.aperture, current.shutterSpeed, current.iso ? `ISO ${current.iso}` : ""].filter(Boolean).map((v, i) => <span key={i}>{v}</span>)}</dd></div><div><dt>项目</dt><dd>{current.series.zh || current.series.en || "未归类"}</dd></div></dl><details><summary>展开完整 JSON</summary><pre className={styles.json}>{JSON.stringify(current, null, 2)}</pre></details><button onClick={() => { const blob = new Blob([JSON.stringify(current, null, 2)], { type: "application/json" }); const url = URL.createObjectURL(blob); const a = document.createElement("a"); a.href = url; a.download = `${current.slug}.json`; a.click(); setTimeout(() => URL.revokeObjectURL(url), 1000); }}>下载此份 JSON</button></> :
-          <form ref={form} onSubmit={save} className={styles.metadataForm}>
+        {!editing ? <><p className={styles.hint}>私有作品信息 · {dirty ? "未保存的预览" : "已保存"} · 空白英文回退中文展示</p><dl className={styles.summaryCard}><div><dt>名称</dt><dd>{current.file}</dd></div><div><dt>时间</dt><dd>{[current.date, current.time].filter(Boolean).join(" ") || "待补充"}</dd></div><div><dt>大小</dt><dd>{current.width || "—"} × {current.height || "—"} px{asset ? ` / ${(asset.byte_size / 1024 / 1024).toFixed(2)} MB` : ""}</dd></div><div><dt>地点</dt><dd>{current.location.display[locale] || current.location.display.zh || "待补充"}</dd></div><div><dt>参数</dt><dd className={styles.parameters}>{[current.focalLength35mm, current.aperture, current.shutterSpeed, current.iso ? `ISO ${current.iso}` : ""].filter(Boolean).map((v, i) => <span key={i}>{v}</span>)}</dd></div><div><dt>项目</dt><dd>{current.series.zh || current.series.en || "未归类"}</dd></div></dl><details><summary>展开完整 JSON</summary><pre className={styles.json}>{JSON.stringify(current, null, 2)}</pre></details><button onClick={() => { const blob = new Blob([JSON.stringify(current, null, 2)], { type: "application/json" }); const url = URL.createObjectURL(blob); const a = document.createElement("a"); a.href = url; a.download = `${current.slug}.json`; a.click(); setTimeout(() => URL.revokeObjectURL(url), 1000); }}>下载此份 JSON</button></> :
+          <form ref={form} onSubmit={save} className={styles.metadataForm} onChangeCapture={e => { if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) e.target.dataset.edited = "true"; }}>
+            <button type="button" disabled={busy || deleted} onClick={translateMissing}>{translating ? "正在翻译…" : "一键补全英文空缺"}</button>
+            <p className={styles.hint}>仅将已有中文（含地点与定位检索词）发送至 NVIDIA 翻译；不发送图片、GPS、原始 EXIF。不会覆盖已有英文，也不会编造空缺拍摄信息。红色建议需核对后保存；支持 Ctrl+S / ⌘S。</p>
             <fieldset disabled={busy || deleted}><legend>作品内容</legend>
               {bilingual("标题", record.title, title => change({ ...record, title }), "如：雪的脉络", undefined, 300)}
               {bilingual("替代文本", record.alt, alt => change({ ...record, alt }), "如：雪原中蜿蜒的河流")}

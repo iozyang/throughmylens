@@ -47,7 +47,28 @@ def main() -> int:
     create_admin_parser = subcommands.add_parser("create-admin")
     create_admin_parser.add_argument("--email", required=True)
     subcommands.add_parser("init-storage", help="Ensure local development buckets exist")
+    names = subcommands.add_parser(
+        "migrate-photo-names", help="Preview friendly names; --apply commits atomically"
+    )
+    names.add_argument("--apply", action="store_true")
+    subcommands.add_parser(
+        "backfill-previews", help="Add missing 160/960px private previews; preserve existing images"
+    )
     arguments = parser.parse_args()
+    if arguments.command == "backfill-previews":
+        from app.photos.backfill_previews import backfill
+
+        with SessionLocal() as db:
+            print(f"Added {backfill(db)} preview assets.")
+        return 0
+    if arguments.command == "migrate-photo-names":
+        import json
+
+        from app.photos.naming import migrate_names
+
+        with SessionLocal() as db:
+            print(json.dumps(migrate_names(db, arguments.apply), ensure_ascii=False, indent=2))
+        return 0
 
     if arguments.command == "create-admin":
         return create_admin(arguments.email)

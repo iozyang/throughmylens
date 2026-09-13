@@ -6,7 +6,7 @@ import { formatPhotoDate } from "./metadata-date";
 export function ImageMetadata({ photograph, locale }: { photograph: Photograph; locale: Locale }) {
   const date = formatPhotoDate(photograph.date, photograph.time, locale);
   const location = photograph.location && localize(photograph.location, locale).trim();
-  const focal = photograph.focalLength || (photograph.focalLength35mm && `${photograph.focalLength35mm} (${locale === "zh" ? "等效" : "equiv."})`);
+  const focal = photograph.focalLength35mm;
   const parameters = [focal, photograph.aperture, photograph.shutterSpeed,
     photograph.iso && `ISO ${photograph.iso}`].filter(Boolean);
   return <span className={styles.metadata}>

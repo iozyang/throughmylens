@@ -13,7 +13,7 @@ from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 from starlette.concurrency import run_in_threadpool
-from starlette.responses import RedirectResponse
+from starlette.responses import RedirectResponse, StreamingResponse
 
 from app.core.config import get_settings
 from app.db.session import get_db
@@ -27,6 +27,7 @@ from app.models.photo import (
 )
 from app.models.user import User
 from app.photos.imaging import ImageRejected, ImagingUnavailable, inspect_jpeg
+from app.photos.naming import assign_name
 from app.photos.record import (
     CatalogRecord,
     RecordEdit,
@@ -37,6 +38,7 @@ from app.photos.record import (
     system_fields,
 )
 from app.photos.schemas import PhotoEdit, ProcessingConfig, missing_fields
+from app.photos.translation import TranslationRequest, translate
 from app.routers.auth import get_current_admin, require_csrf
 from app.storage.s3 import get_s3_client, get_s3_signing_client
 
@@ -90,7 +92,6 @@ def serialize(photo: Photo, db: Session) -> dict:
         private = db.get(PhotoPrivateMetadata, photo.id)
         record = from_legacy(metadata.values, private.raw_exif if private else {}, translated)
     record = system_fields(record, photo, next((a for a in assets if a.kind == "display"), None))
-    settings = get_settings()
     return {
         "id": str(photo.id),
         "filename": photo.filename,
@@ -120,14 +121,7 @@ def serialize(photo: Photo, db: Session) -> dict:
                 "height": a.height,
                 "byte_size": a.byte_size,
                 "quality": a.quality,
-                "url": get_s3_signing_client().generate_presigned_url(
-                    "get_object",
-                    Params={
-                        "Bucket": settings.s3_private_bucket,
-                        "Key": a.key,
-                    },
-                    ExpiresIn=900,
-                ),
+                "url": f"/api/v1/photos/{photo.id}/assets/{a.id}",
             }
             for a in assets
         ],
@@ -230,9 +224,9 @@ def ingest(path: Path, filename: str, config: ProcessingConfig, admin: User, db:
     try:
         db.add(photo)
         db.flush()
-        record = system_fields(
-            from_legacy(inspection.metadata, inspection.raw_exif, {}, exif_location=True), photo
-        )
+        record = from_legacy(inspection.metadata, inspection.raw_exif, {}, exif_location=True)
+        assign_name(photo, record, db)
+        record = system_fields(record, photo)
         db.add(
             PhotoMetadata(
                 photo_id=photo_id,
@@ -375,6 +369,15 @@ def update_record(photo_id: uuid.UUID, payload: RecordEdit, db: Session = Depend
     return serialize(photo, db)
 
 
+@router.post("/{photo_id}/translate", dependencies=[Depends(require_csrf)])
+def translate_metadata(
+    photo_id: uuid.UUID, payload: TranslationRequest, db: Session = Depends(get_db)
+):
+    if get_photo(db, photo_id).publication_status == "deleted":
+        raise HTTPException(409, "请先恢复照片。")
+    return {"suggestions": translate(payload)}
+
+
 @router.get("/{photo_id}/image")
 def photo_image(photo_id: uuid.UUID, db: Session = Depends(get_db)):
     photo = get_photo(db, photo_id)
@@ -391,6 +394,38 @@ def photo_image(photo_id: uuid.UUID, db: Session = Depends(get_db)):
         ExpiresIn=300,
     )
     return RedirectResponse(url, headers={"Cache-Control": "private, no-store"})
+
+
+@router.get("/{photo_id}/assets/{asset_id}")
+def private_asset(photo_id: uuid.UUID, asset_id: uuid.UUID, db: Session = Depends(get_db)):
+    asset = db.scalar(
+        select(PhotoAsset).where(PhotoAsset.id == asset_id, PhotoAsset.photo_id == photo_id)
+    )
+    if not asset:
+        raise HTTPException(404, "预览图已更新，请刷新相册。")
+    try:
+        obj = get_s3_client().get_object(Bucket=get_settings().s3_private_bucket, Key=asset.key)
+    except Exception as error:
+        raise HTTPException(503, "预览图暂不可用，请检查私有存储。") from error
+
+    def chunks():
+        try:
+            yield from obj["Body"].iter_chunks(chunk_size=65536)
+        finally:
+            obj["Body"].close()
+
+    # UUID identifies an immutable render, but authentication and short PRIVATE
+    # caching still apply. Never expose admin assets through a public CDN cache.
+    return StreamingResponse(
+        chunks(),
+        media_type=asset.content_type,
+        headers={
+            "Cache-Control": "private, max-age=300",
+            "Vary": "Cookie",
+            "Content-Length": str(asset.byte_size),
+            "X-Content-Type-Options": "nosniff",
+        },
+    )
 
 
 @router.delete("/{photo_id}", dependencies=[Depends(require_csrf)])

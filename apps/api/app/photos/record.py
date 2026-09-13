@@ -305,7 +305,7 @@ def from_legacy(values: dict, raw: dict, translations: dict, *, exif_location=Fa
 def system_fields(record: dict, photo, display=None) -> dict:
     record = CatalogRecord.model_validate(record).model_dump()
     record.update(
-        slug=photo.id.hex,
+        slug=photo.filename.rsplit(".", 1)[0],
         file=photo.filename,
         src=f"/api/v1/photos/{photo.id}/image",
         width=display.width if display else "",

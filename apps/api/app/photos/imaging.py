@@ -178,7 +178,7 @@ def inspect_jpeg(path: Path) -> Inspection:
     return Inspection(width, height, digest, byte_size, profile, metadata, raw, gps)
 
 
-def render_variants(path: Path, config: ProcessingConfig) -> list[dict]:
+def render_variants(path: Path, config: ProcessingConfig, *, kinds: tuple[str, ...] | None = None) -> list[dict]:
     import pyvips
 
     pyvips.cache_set_max_mem(64 * 1024 * 1024)
@@ -189,7 +189,9 @@ def render_variants(path: Path, config: ProcessingConfig) -> list[dict]:
     longest = max(source.width, source.height)
     display_edge = longest if config.preset == "preserve" else min(longest, config.long_edge)
     results = []
-    for kind, edge in (("thumbnail", 480), ("gallery", 1440), ("display", display_edge)):
+    for kind, edge in (("micro", 160), ("thumbnail", 480), ("preview", 960), ("gallery", 1440), ("display", display_edge)):
+        if kinds is not None and kind not in kinds:
+            continue
         target = min(edge, display_edge, longest)
         scaled = source.resize(target / longest) if target < longest else source.copy()
         # Only a controlled ICC survives; GPS, MakerNotes, XMP and serials are omitted.

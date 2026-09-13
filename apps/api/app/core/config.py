@@ -42,6 +42,9 @@ class Settings(BaseSettings):
     photo_max_upload_mb: int = Field(default=30, ge=1, le=100)
     photo_max_megapixels: int = Field(default=60, ge=1, le=100)
     image_worker_enabled: bool = True
+    translation_api_key: SecretStr = SecretStr("")
+    translation_model: str = "deepseek-ai/deepseek-v4-flash-0731"
+    translation_timeout_seconds: int = Field(default=40, ge=5, le=60)
 
     @property
     def cors_origins(self) -> list[str]:

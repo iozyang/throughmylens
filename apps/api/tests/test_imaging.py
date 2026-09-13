@@ -56,9 +56,13 @@ def test_outputs_do_not_upscale_or_keep_private_exif(tmp_path, preset):
     path = tmp_path / "photo.jpg"
     make_jpeg(path, orientation=6)
     variants = render_variants(path, ProcessingConfig(preset=preset))
-    assert len(variants) == 3
+    assert len(variants) == 5
     for asset in variants:
-        assert (asset["width"], asset["height"]) == (200, 300)
+        if asset["kind"] == "micro":
+            assert asset["height"] == 160
+            assert abs(asset["width"] / asset["height"] - 2 / 3) < .01
+        else:
+            assert (asset["width"], asset["height"]) == (200, 300)
         with Image.open(io.BytesIO(asset["data"])) as output:
             output.load()
             assert not output.getexif()

@@ -29,7 +29,7 @@ def test_complete_empty_contract_and_system_identity():
     photo = SimpleNamespace(id=uuid.uuid4(), filename="stable.jpg", created_at=datetime.now(UTC))
     record.update(slug="forged", file="renamed.jpg", src="https://evil.invalid")
     pending = system_fields(record, photo)
-    assert pending["slug"] == photo.id.hex
+    assert pending["slug"] == "stable"
     assert pending["file"] == "stable.jpg"
     assert pending["width"] == pending["height"] == ""
     rendered = system_fields(pending, photo, SimpleNamespace(width=1500, height=1000))
@@ -151,7 +151,7 @@ def library(tmp_path, monkeypatch):
 def test_ingest_edit_atomicity_dimensions_delete_restore(library):
     client, initial, sessions, _ = library
     photo_id = initial["id"]
-    assert initial["filename"] == f"{uuid.UUID(photo_id).hex}.jpg"
+    assert initial["filename"] == "20260913-123000-000001.jpg"
     assert initial["record"]["width"] == ""
     assert initial["record"]["location"]["city"]["zh"] == "上海"
     with sessions() as db:
@@ -205,6 +205,7 @@ def test_ingest_edit_atomicity_dimensions_delete_restore(library):
 def test_mutations_require_csrf_and_gallery_requires_login(library):
     client, initial, _, app = library
     del app.dependency_overrides[require_csrf]
+    assert client.post(f"/photos/{initial['id']}/translate", json={"fields": {}}).status_code == 403
     assert (
         client.patch(
             f"/photos/{initial['id']}/metadata", json={"version": 1, "record": initial["record"]}
@@ -212,8 +213,47 @@ def test_mutations_require_csrf_and_gallery_requires_login(library):
         == 403
     )
     del app.dependency_overrides[get_current_admin]
-    for endpoint in ("/photos", f"/photos/{initial['id']}", f"/photos/{initial['id']}/image"):
+    for endpoint in ("/photos", f"/photos/{initial['id']}", f"/photos/{initial['id']}/image", f"/photos/{initial['id']}/assets/{uuid.uuid4()}"):
         assert client.get(endpoint).status_code == 401
+
+
+def test_old_names_migrate_once_and_uuid_links_survive(library):
+    from app.models.photo import PhotoNumber
+    from app.photos.naming import migrate_names
+    client, initial, sessions, _ = library
+    with sessions() as db:
+        photo = db.get(Photo, uuid.UUID(initial["id"]))
+        db.delete(db.scalar(select(PhotoNumber).where(PhotoNumber.photo_id == photo.id)))
+        photo.filename = "old-original.jpg"
+        db.commit()
+        before = copy.deepcopy(db.get(PhotoMetadata, photo.id).record)
+        master_key = photo.master_key
+        assert len(migrate_names(db, apply=True)) == 1
+        assert migrate_names(db, apply=True) == []
+        assert photo.master_key == master_key
+        metadata = db.get(PhotoMetadata, photo.id)
+        assert metadata.sources["previous_filename"] == "old-original.jpg"
+        assert metadata.record["src"] == before["src"]
+        assert metadata.record["title"] == before["title"]
+    assert client.get(f"/photos/{initial['id']}").status_code == 200
+
+
+def test_private_asset_url_is_stable_and_cache_remains_private(library, monkeypatch):
+    import io
+    from botocore.response import StreamingBody
+    client, initial, sessions, _ = library
+    with sessions() as db:
+        asset = PhotoAsset(photo_id=uuid.UUID(initial["id"]), kind="thumbnail", key="test.jpg", width=3, height=2, byte_size=4, quality=90)
+        db.add(asset); db.commit()
+        path = f"/photos/{initial['id']}/assets/{asset.id}"
+    monkeypatch.setattr(photos, "get_s3_client", lambda: SimpleNamespace(get_object=lambda **kwargs: {"Body": StreamingBody(io.BytesIO(b"jpeg"), 4)}))
+    a = client.get(f"/photos/{initial['id']}").json()
+    b = client.get(f"/photos/{initial['id']}").json()
+    assert a["assets"][0]["url"] == b["assets"][0]["url"] == "/api/v1" + path
+    response = client.get(path)
+    assert response.content == b"jpeg"
+    assert response.headers["cache-control"] == "private, max-age=300"
+    assert response.headers["vary"] == "Cookie"
 
 
 def test_worker_persists_final_dimensions_without_overwriting_edits(library, monkeypatch):

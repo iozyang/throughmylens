@@ -1,4 +1,5 @@
 export const API = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8000";
+export const privateImageUrl = (url: string) => url.startsWith("/") ? `${API}${url}` : url;
 export type Config = { preset: "preserve" | "web_standard"; long_edge: number; quality: number; min_quality: number; max_output_kb: number };
 export type TextPair = { zh: string; en: string };
 export type CatalogRecord = {
@@ -14,7 +15,7 @@ export type CatalogRecord = {
 export type Values = { camera_make: string; camera_model: string; lens: string; focal_length: number | null; aperture: number | null; shutter_speed: string; iso: number | null; captured_at: string; location: string };
 export type Translation = { title: string; caption: string; alt_text: string };
 export type Asset = { kind: string; url: string; width: number; height: number; byte_size: number; quality: number };
-export type Photo = { id: string; filename: string; width: number; height: number; byte_size: number; color_profile: string; publication_status: string; processing_status: string; processing_config: Config; processing_error: string | null; metadata: Values; record: CatalogRecord; sources: Record<string, string>; review_status: string; missing_fields: string[]; translations: Record<"zh" | "en", Translation>; version: number; assets: Asset[] };
+export type Photo = { id: string; created_at: string; filename: string; width: number; height: number; byte_size: number; color_profile: string; publication_status: string; processing_status: string; processing_config: Config; processing_error: string | null; metadata: Values; record: CatalogRecord; sources: Record<string, string>; review_status: string; missing_fields: string[]; translations: Record<"zh" | "en", Translation>; version: number; assets: Asset[] };
 
 export function csrf(): string {
   return document.cookie.split("; ").find((v) => v.startsWith("tml_csrf="))?.split("=").slice(1).join("=") || "";
