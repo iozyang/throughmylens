@@ -3,12 +3,12 @@
 import Image from "next/image";
 import { useCallback, useEffect, useRef } from "react";
 import { copy } from "./copy";
-import { localize, type Locale, type ViewerSelection } from "./types";
+import { localize, type Locale, type Photograph, type ViewerSelection } from "./types";
 import { useReducedMotion } from "./use-motion-preference";
 import styles from "./photography.module.css";
 
-export function FullscreenViewer({ selection, locale, onClose }: {
-  selection: ViewerSelection; locale: Locale; onClose: () => void;
+export function FullscreenViewer({ selection, photograph, locale, onClose }: {
+  selection: ViewerSelection; photograph?: Photograph; locale: Locale; onClose: () => void;
 }) {
   const dialog = useRef<HTMLDialogElement>(null);
   const picture = useRef<HTMLDivElement>(null);
@@ -17,7 +17,7 @@ export function FullscreenViewer({ selection, locale, onClose }: {
   const closing = useRef(false);
   const animation = useRef<Animation | null>(null);
   const reduced = useReducedMotion();
-  const photo = selection.photograph;
+  const photo = photograph || selection.photograph;
 
   const sourceTransform = useCallback(() => {
     const target = picture.current?.getBoundingClientRect();

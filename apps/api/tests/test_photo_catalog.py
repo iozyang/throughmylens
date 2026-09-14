@@ -19,6 +19,54 @@ from app.photos.record import CatalogRecord, from_legacy, require_complete, syst
 from app.photos.schemas import ProcessingConfig
 from app.routers import photos
 from app.routers.auth import get_current_admin, require_csrf
+from app.routers import public_work
+
+
+def test_public_metadata_reads_saved_edits_without_exposing_private_library(library, monkeypatch):
+    client, initial, sessions, app = library
+    app.include_router(public_work.router)
+    monkeypatch.setattr(public_work, "public_catalog", lambda: {"curated.jpg": "stable-public-id"})
+    photo_id = uuid.UUID(initial["id"])
+    # Being a draft or being in an album does not qualify as an existing public work.
+    assert client.get("/public/selected-work/metadata").json() == {"photos": []}
+    with sessions() as db:
+        metadata = db.get(PhotoMetadata, photo_id)
+        metadata.sources = {**metadata.sources, "selected_work_file": "curated.jpg"}
+        db.commit()
+    before = client.get("/public/selected-work/metadata")
+    assert before.headers["cache-control"] == "no-store"
+    assert before.json()["photos"][0]["iso"] == 100
+    record = copy.deepcopy(initial["record"])
+    record.update(focalLength="12mm", focalLength35mm="24mm", aperture="f/8", shutterSpeed="1/125s", iso=640)
+    saved = client.patch(f"/photos/{photo_id}/metadata", json={
+        "version": initial["version"], "record": record, "reviewed": False,
+    })
+    assert saved.status_code == 200, saved.text
+    # No admin cookie is necessary for this constrained public projection.
+    del app.dependency_overrides[get_current_admin]
+    assert client.get("/photos").status_code == 401
+    result = client.get("/public/selected-work/metadata").json()["photos"][0]
+    assert result["id"] == "stable-public-id"  # Not the renamed filename or private UUID.
+    assert (result["focalLength35mm"], result["aperture"], result["shutterSpeed"], result["iso"]) == ("24mm", "f/8", "1/125s", 640)
+    assert set(result) == {"id", "title", "alt", "location", "date", "time", "focalLength35mm", "aperture", "shutterSpeed", "iso"}
+    assert set(result["location"]) == {"zh", "en"}
+    with sessions() as db:
+        metadata = db.get(PhotoMetadata, photo_id)
+        metadata.record = {**metadata.record, "focalLength35mm": "", "iso": ""}
+        db.commit()
+    cleared = client.get("/public/selected-work/metadata").json()["photos"][0]
+    assert cleared["iso"] == cleared["focalLength35mm"] == ""
+    with sessions() as db:
+        db.get(Photo, photo_id).publication_status = "deleted"
+        db.commit()
+    assert client.get("/public/selected-work/metadata").json() == {"photos": []}
+
+
+def test_public_catalog_missing_fails_closed(library, monkeypatch, tmp_path):
+    client, _, _, app = library
+    app.include_router(public_work.router)
+    monkeypatch.setattr(public_work, "CATALOG", tmp_path / "absent.json")
+    assert client.get("/public/selected-work/metadata").status_code == 503
 
 
 def test_complete_empty_contract_and_system_identity():

@@ -54,10 +54,10 @@
 .photographyImage[data-details="true"] .metadataDate, .photographyImage:not([data-touch="true"]):focus-visible .metadataDate { opacity: 1; transition-delay: 400ms; }
 .photographyImage[data-details="true"] .metadataTechnical, .photographyImage:not([data-touch="true"]):focus-visible .metadataTechnical { opacity: .85; transition-delay: 600ms; }
 .photographyImage[data-details="true"] .metadataCredit, .photographyImage:not([data-touch="true"]):focus-visible .metadataCredit { opacity: .8; transition-delay: 600ms; }
-.mobileHint { position: absolute; bottom: -32px; margin: 0; left: 24px; font-size: 11px; color: var(--secondary); opacity: 0; transition: opacity 500ms ease; pointer-events: none; }
+.mobileHint { margin: 0; font-size: 11px; line-height: 1.6; color: var(--secondary); opacity: 0; transition: opacity 500ms ease; pointer-events: none; }
 .mobileHint[data-visible="true"] { opacity: 1; }
-.motionControl { display: flex; justify-content: flex-end; padding: 18px clamp(24px, 4.2vw, 80px) 0; }
-.motionControl button { background: none; border: 0; padding: 8px 0; font-size: 11px; color: var(--secondary); cursor: pointer; }
+.motionControl { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 18px clamp(24px, 4.2vw, 80px) 0; }
+.motionControl button { flex: none; background: none; border: 0; padding: 8px 0; font-size: 11px; line-height: 1.6; color: var(--secondary); cursor: pointer; white-space: nowrap; }
 .projects { margin-top: clamp(110px, 12vw, 210px); }
 .projectSequence { padding: 52px clamp(24px, 4.2vw, 80px) 0; }
 .project { width: 77%; margin: 0; }

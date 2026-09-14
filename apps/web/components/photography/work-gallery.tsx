@@ -8,6 +8,8 @@ import { FullscreenViewer } from "./fullscreen-viewer";
 import type { Locale, Photograph, ViewerSelection } from "./types";
 import shared from "./photography.module.css";
 import styles from "./work-gallery.module.css";
+import { useLiveMetadata } from "./use-live-metadata";
+import { WorkEnding } from "./work-ending";
 
 // Keep editorial order and natural ratios. Panoramas have their own row.
 function arrangeRows(photographs: Photograph[]) {
@@ -26,7 +28,8 @@ function arrangeRows(photographs: Photograph[]) {
   return rows;
 }
 
-export function WorkGallery({ locale, photographs: selectedWorkPhotographs }: { locale: Locale; photographs: Photograph[] }) {
+export function WorkGallery({ locale, photographs: initialPhotographs }: { locale: Locale; photographs: Photograph[] }) {
+  const selectedWorkPhotographs = useLiveMetadata(initialPhotographs);
   const rows = arrangeRows(selectedWorkPhotographs);
   const [selection, setSelection] = useState<ViewerSelection | null>(null);
   const zh = locale === "zh";
@@ -49,7 +52,7 @@ export function WorkGallery({ locale, photographs: selectedWorkPhotographs }: { 
         </div>)}
       </div> : <p className={styles.empty}>{zh ? "作品正在整理中。" : "Photographs are being prepared."}</p>}
     </main>
-    <Footer photographs={selectedWorkPhotographs} locale={locale} />
-    {selection && <FullscreenViewer selection={selection} locale={locale} onClose={() => setSelection(null)} />}
+    <WorkEnding disabled={!!selection}><Footer photographs={selectedWorkPhotographs} locale={locale} /></WorkEnding>
+    {selection && <FullscreenViewer selection={selection} photograph={selectedWorkPhotographs.find(p => p.id === selection.photograph.id)} locale={locale} onClose={() => setSelection(null)} />}
   </div>;
 }

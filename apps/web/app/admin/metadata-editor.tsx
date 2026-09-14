@@ -4,6 +4,7 @@ import { useEffect, useRef, useState, type FormEvent, type ReactNode } from "rea
 import { privateImageUrl, request, type CatalogRecord, type Photo, type TextPair } from "./photo-api";
 import { cities, countries, regions } from "./location-options";
 import { applyTranslations, translationFields } from "./translation-fields";
+import { notifyMetadataSaved } from "@/components/photography/live-metadata";
 import styles from "./asset-manager.module.css";
 
 function derive(record: CatalogRecord): CatalogRecord {
@@ -94,7 +95,7 @@ export default function MetadataEditor({ photo, onSaved, onClose, initialEdit = 
       const result = await request<Photo>(`/photos/${photo.id}/metadata`, { method: "PATCH", body: JSON.stringify({ version, record: current, reviewed }) });
       setRecord(result.record); setVersion(result.version); setDirty(false); setGenerated([]);
       form.current?.querySelectorAll<HTMLElement>("[data-edited]").forEach(node => delete node.dataset.edited);
-      onSaved(result); setMessage("完整 JSON 已保存，图片文件名保持不变。");
+      onSaved(result); notifyMetadataSaved(); setMessage("完整 JSON 已保存，图片文件名保持不变。");
     } catch (error) { setMessage((error as Error).message); }
     finally { setBusy(false); }
   }

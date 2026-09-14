@@ -8,7 +8,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.core.config import get_settings
 from app.core.logging import configure_logging
-from app.routers import auth, health, photos
+from app.routers import auth, health, photos, public_work
 
 settings = get_settings()
 configure_logging(settings.log_level)
@@ -45,6 +45,7 @@ app.add_middleware(
 app.include_router(health.router, prefix="/api/v1")
 app.include_router(auth.router, prefix="/api/v1")
 app.include_router(photos.router, prefix="/api/v1")
+app.include_router(public_work.router, prefix="/api/v1")
 
 
 @app.get("/health", include_in_schema=False)

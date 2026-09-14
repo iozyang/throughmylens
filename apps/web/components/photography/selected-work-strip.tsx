@@ -1,20 +1,22 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { PhotographyImage } from "./photography-image";
 import { copy } from "./copy";
 import { rebaseStripPosition, resizeStripPosition } from "./strip-geometry";
 import type { Locale, Photograph, ViewerSelection } from "./types";
 import styles from "./photography.module.css";
 
-export function SelectedWorkStrip({ photographs, locale, paused, onView }: {
+export function SelectedWorkStrip({ photographs, locale, paused, onView, controls }: {
   photographs: Photograph[]; locale: Locale; paused: boolean; onView: (selection: ViewerSelection) => void;
+  controls?: ReactNode;
 }) {
   const viewport = useRef<HTMLDivElement>(null);
   const group = useRef<HTMLDivElement>(null);
   const interaction = useRef({ hover: false, focus: false, down: false, dragged: false, touch: false, x: 0, idleUntil: 0 });
   const [hint, setHint] = useState(false);
   const motion = useRef({ paused });
+  const sequenceKey = photographs.map(photo => `${photo.id}:${photo.width}:${photo.height}`).join("|");
 
   // Motion preferences must not tear down the scroll geometry. In particular,
   // opening the viewer must leave its source photograph exactly where it was.
@@ -59,7 +61,7 @@ export function SelectedWorkStrip({ photographs, locale, paused, onView }: {
     };
     frame = requestAnimationFrame(tick);
     return () => { cancelAnimationFrame(frame); resize.disconnect(); intersection.disconnect(); element.removeEventListener("scroll", recycle); };
-  }, [photographs]);
+  }, [sequenceKey]);
 
   useEffect(() => {
     if (!window.matchMedia("(pointer: coarse)").matches) return;
@@ -122,6 +124,9 @@ export function SelectedWorkStrip({ photographs, locale, paused, onView }: {
           duplicate={repeat !== 1} onView={onView} />)}
       </div>)}
     </div>
-    <p className={styles.mobileHint} data-visible={hint} aria-hidden={!hint}>{copy[locale].hint}</p>
+    <div className={styles.motionControl}>
+      <p className={styles.mobileHint} data-visible={hint} aria-hidden={!hint}>{copy[locale].hint}</p>
+      {controls}
+    </div>
   </div>;
 }
