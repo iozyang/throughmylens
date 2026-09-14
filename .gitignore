@@ -22,7 +22,7 @@ __pycache__/
 
 # Runtime data
 data/
-work/
+/work/
 
 # Local/demo JPG images
 *.jpg

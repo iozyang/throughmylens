@@ -150,6 +150,9 @@ GitHub Project is the canonical task/roadmap tracker for ThroughMyLens. It compl
 Use the personal GitHub Project:
 
 - Project: `ThroughMyLens Development`
+- Project owner: `iozyang`
+- Project number: `2`
+- Project ID: `PVT_kwHOCOoOms4BjWY6`
 - Repository: `iozyang/throughmylens`
 - Production branch: `main`
 
@@ -195,6 +198,8 @@ Do not mark an item `Done` when relevant tests are failing, required validation 
 
 GitHub Projects may be managed with GitHub CLI (`gh`). The authenticated token must include the `project` scope.
 
+The CLI integration for this Project has been verified for both read and write operations. Project item status changes made through `gh` are reflected in the GitHub Project board.
+
 Check authentication:
 
 ```powershell
@@ -213,16 +218,28 @@ List projects:
 gh project list --owner iozyang
 ```
 
-View the ThroughMyLens project after its project number is known:
+List this Project's fields:
 
 ```powershell
-gh project view <PROJECT_NUMBER> --owner iozyang
+gh project field-list 2 --owner iozyang
+```
+
+View the ThroughMyLens project:
+
+```powershell
+gh project view 2 --owner iozyang
 ```
 
 List items and useful fields:
 
 ```powershell
-gh project item-list <PROJECT_NUMBER> --owner iozyang --field "Status" --field "Priority" --field "Area" --field "Type"
+gh project item-list 2 --owner iozyang --field "Status" --field "Priority" --field "Area" --field "Types"
+```
+
+For machine-readable output or when terminal columns are truncated, prefer:
+
+```powershell
+gh project item-list 2 --owner iozyang --field "Status" --field "Priority" --field "Area" --field "Types" --format json
 ```
 
 Create a repository Issue:
@@ -234,25 +251,25 @@ gh issue create -R iozyang/throughmylens --title "<TITLE>" --body "<BODY>"
 Add an Issue to the Project:
 
 ```powershell
-gh project item-add <PROJECT_NUMBER> --owner iozyang --url "<ISSUE_URL>"
+gh project item-add 2 --owner iozyang --url "<ISSUE_URL>"
 ```
 
 Update an Issue's Project status:
 
 ```powershell
-gh project item-edit <PROJECT_NUMBER> --owner iozyang --url "<ISSUE_URL>" --field "Status" --value "In Progress"
+gh project item-edit 2 --owner iozyang --url "<ISSUE_URL>" --field "Status" --value "In Progress"
 ```
 
 Update other single-select fields in the same way:
 
 ```powershell
-gh project item-edit <PROJECT_NUMBER> --owner iozyang --url "<ISSUE_URL>" --field "Priority" --value "P1"
+gh project item-edit 2 --owner iozyang --url "<ISSUE_URL>" --field "Priority" --value "P1"
 ```
 
 Create a lightweight draft item only when an Issue is not yet warranted:
 
 ```powershell
-gh project item-create <PROJECT_NUMBER> --owner iozyang --title "<TITLE>" --body "<BODY>"
+gh project item-create 2 --owner iozyang --title "<TITLE>" --body "<BODY>"
 ```
 
 Prefer human-readable field names and values for normal interactive work. Use GraphQL/node IDs only for advanced scripting where necessary.

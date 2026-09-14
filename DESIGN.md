@@ -1,4 +1,24 @@
-# throughmylens.icu — Design System
+# throughmylens — Design System
+
+## 0. Document Role and Priority
+
+This document defines the long-term visual and interaction principles of ThroughMyLens.
+
+It should guide design decisions, but it is not a frozen implementation specification.
+
+Priority when instructions conflict:
+
+1. The user's current explicit request
+2. Existing user-approved implementation and behavior
+3. `AGENTS.md` repository working rules
+4. The principles in this `DESIGN.md`
+5. Examples, recommended timings, dimensions, and implementation suggestions in this document
+
+Do not revert an intentional existing design solely because it differs from an older example or recommended value in this document.
+
+Exact timings, image counts, dimensions, routes, and layout examples should be treated as design defaults unless explicitly marked as requirements.
+
+When an intentional design change is approved and materially changes a long-term principle, update this document accordingly.
 
 ## 1. Project Positioning
 
