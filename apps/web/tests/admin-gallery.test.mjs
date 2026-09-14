@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { latestCoverPhotos } from "../app/admin/album-cover.ts";
-import { galleryColumns, imageSizes, flipTransform } from "../app/admin/gallery-geometry.ts";
+import { galleryColumns, imageSizes, flipTransform, nearGalleryLayout } from "../app/admin/gallery-geometry.ts";
 import { applyTranslations } from "../app/admin/translation-fields.ts";
 
 test("covers use latest upload, not exposure date or manual order; do not mutate", () => {
@@ -26,4 +26,11 @@ test("translation never overwrites manual English or changed Chinese", () => {
   assert.equal(result.record.alt.en, "Manual");
   assert.equal(result.record.description.en, "");
   assert.equal(original.title.en, "");
+});
+
+test("HQ loading uses target layout, not an old visible FLIP position", () => {
+  assert.equal(nearGalleryLayout(300, 16, 500, 900), true);
+  assert.equal(nearGalleryLayout(300, 2500, 500, 900), false);
+  assert.equal(nearGalleryLayout(-3000, 3100, 500, 900), true);
+  assert.equal(nearGalleryLayout(-3000, 16, 500, 900), false);
 });

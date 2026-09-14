@@ -2,7 +2,7 @@
 /* eslint-disable @next/next/no-img-element */
 import { useEffect, useRef, useState, type CSSProperties } from "react";
 import { privateImageUrl, type Photo } from "./photo-api";
-import { imageSizes } from "./gallery-geometry";
+import { imageSizes, nearGalleryLayout } from "./gallery-geometry";
 import styles from "./asset-manager.module.css";
 
 export function imageCandidates(photo: Photo) {
@@ -25,7 +25,7 @@ export default function GalleryImage({ photo, mode, index, onOpen }: { photo: Ph
   useEffect(() => {
     const node = tile.current;
     if (!node) return;
-    if (process.env.NODE_ENV === "development") node.dataset.mountToken = crypto.randomUUID();
+    if (process.env.NODE_ENV === "development") node.dataset.mountToken = globalThis.crypto?.randomUUID?.() || `${Date.now()}-${Math.random()}`;
     const observer = new IntersectionObserver(entries => { for (const entry of entries) setNear(entry.isIntersecting); }, { rootMargin: `${innerHeight}px 0px` });
     observer.observe(node);
     return () => observer.disconnect();
@@ -35,8 +35,8 @@ export default function GalleryImage({ photo, mode, index, onOpen }: { photo: Ph
     if (!near || !node || !thumbnail) return;
     // An old IntersectionObserver result may still say "near" in the render
     // that expands the grid. Recheck new geometry before requesting HQ bytes.
-    const rect = tile.current?.getBoundingClientRect();
-    if (!rect || rect.bottom < -innerHeight || rect.top > innerHeight * 2) return;
+    const tileNode = tile.current, gridNode = tileNode?.offsetParent;
+    if (!tileNode || !gridNode || !nearGalleryLayout(gridNode.getBoundingClientRect().top, tileNode.offsetTop, tileNode.offsetHeight, innerHeight)) return;
     let active = true;
     const upgrade = new Image();
     upgrade.decoding = "async"; upgrade.sizes = sizes; upgrade.srcset = srcSet; upgrade.src = privateImageUrl(thumbnail.url);
